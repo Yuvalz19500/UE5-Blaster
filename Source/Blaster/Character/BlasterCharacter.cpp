@@ -4,6 +4,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 ABlasterCharacter::ABlasterCharacter()
 {
@@ -17,6 +18,9 @@ ABlasterCharacter::ABlasterCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	bUseControllerRotationYaw = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -81,4 +85,5 @@ void ABlasterCharacter::HandleLook(const FInputActionValue& InputActionValue)
 
 void ABlasterCharacter::HandleJump()
 {
+	ABlasterCharacter::Jump();
 }
