@@ -4,6 +4,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Blaster/BlasterComponents/CombatComponent.h"
 #include "Blaster/Weapon/Weapon.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -25,8 +26,12 @@ ABlasterCharacter::ABlasterCharacter()
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(RootComponent);
 
+	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	Combat->SetIsReplicated(true);
+
 	bUseControllerRotationYaw = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -72,7 +77,35 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	if (ActionJump)
 	{
-		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &ThisClass::HandleJump);
+		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &ThisClass::HandleJumpAction);
+	}
+
+	if (ActionEquip)
+	{
+		EnhancedInputComponent->BindAction(ActionEquip, ETriggerEvent::Triggered, this, &ThisClass::HandleEquipAction);
+	}
+
+	if (ActionCrouch)
+	{
+		EnhancedInputComponent->BindAction(ActionCrouch, ETriggerEvent::Started, this,
+		                                   &ThisClass::HandleCrouchAction);
+	}
+
+	if (ActionAim)
+	{
+		EnhancedInputComponent->BindAction(ActionAim, ETriggerEvent::Started, this, &ThisClass::HandleStartAimAction);
+		EnhancedInputComponent->BindAction(ActionAim, ETriggerEvent::Completed, this,
+		                                   &ThisClass::HandleCompleteAimAction);
+	}
+}
+
+void ABlasterCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (Combat)
+	{
+		Combat->Character = this;
 	}
 }
 
@@ -96,9 +129,60 @@ void ABlasterCharacter::HandleLook(const FInputActionValue& InputActionValue)
 	AddControllerYawInput(LookVector.X);
 }
 
-void ABlasterCharacter::HandleJump()
+void ABlasterCharacter::HandleJumpAction()
 {
 	ABlasterCharacter::Jump();
+}
+
+void ABlasterCharacter::HandleEquipAction()
+{
+	if (Combat)
+	{
+		if (HasAuthority())
+		{
+			Combat->EquipWeapon(OverlappingWeapon);
+		}
+		else
+		{
+			ServerEquipAction();
+		}
+	}
+}
+
+void ABlasterCharacter::ServerEquipAction_Implementation()
+{
+	if (Combat)
+	{
+		Combat->EquipWeapon(OverlappingWeapon);
+	}
+}
+
+void ABlasterCharacter::HandleCrouchAction()
+{
+	if (bIsCrouched)
+	{
+		UnCrouch();
+	}
+	else
+	{
+		Crouch();
+	}
+}
+
+void ABlasterCharacter::HandleStartAimAction()
+{
+	if (Combat)
+	{
+		Combat->SetAiming(true);
+	}
+}
+
+void ABlasterCharacter::HandleCompleteAimAction()
+{
+	if (Combat)
+	{
+		Combat->SetAiming(false);
+	}
 }
 
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
@@ -129,4 +213,14 @@ void ABlasterCharacter::OnRep_OverlappingWeapon(const AWeapon* LastWeapon) const
 	{
 		LastWeapon->ShowPickupWidget(false);
 	}
+}
+
+bool ABlasterCharacter::IsWeaponEquipped() const
+{
+	return Combat && Combat->EquippedWeapon;
+}
+
+bool ABlasterCharacter::IsAiming() const
+{
+	return Combat && Combat->bAiming;
 }

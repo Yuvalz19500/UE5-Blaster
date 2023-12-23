@@ -11,6 +11,7 @@ class UInputMappingContext;
 class UInputAction;
 class UWidgetComponent;
 class AWeapon;
+class UCombatComponent;
 
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter
@@ -22,12 +23,17 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void PostInitializeComponents() override;
 
 protected:
 	virtual void BeginPlay() override;
 	void HandleMove(const FInputActionValue& InputActionValue);
 	void HandleLook(const FInputActionValue& InputActionValue);
-	void HandleJump();
+	void HandleJumpAction();
+	void HandleEquipAction();
+	void HandleCrouchAction();
+	void HandleStartAimAction();
+	void HandleCompleteAimAction();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
@@ -48,6 +54,15 @@ private:
 	UPROPERTY(EditAnywhere, Category ="Player Input|Character Movement")
 	TObjectPtr<UInputAction> ActionJump;
 
+	UPROPERTY(EditAnywhere, Category ="Player Input|Character Movement")
+	TObjectPtr<UInputAction> ActionCrouch;
+
+	UPROPERTY(EditAnywhere, Category ="Player Input|Character Combat")
+	TObjectPtr<UInputAction> ActionEquip;
+
+	UPROPERTY(EditAnywhere, Category ="Player Input|Character Combat")
+	TObjectPtr<UInputAction> ActionAim;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<UWidgetComponent> OverheadWidget;
 
@@ -57,6 +72,14 @@ private:
 	UFUNCTION()
 	void OnRep_OverlappingWeapon(const AWeapon* LastWeapon) const;
 
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UCombatComponent> Combat;
+
+	UFUNCTION(Server, Reliable)
+	void ServerEquipAction();
+
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
+	bool IsWeaponEquipped() const;
+	bool IsAiming() const;
 };
