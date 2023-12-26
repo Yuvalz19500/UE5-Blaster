@@ -36,6 +36,7 @@ protected:
 	void HandleStartAimAction();
 	void HandleCompleteAimAction();
 	void AimOffset(float DeltaTime);
+	virtual void Jump() override;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Camera")

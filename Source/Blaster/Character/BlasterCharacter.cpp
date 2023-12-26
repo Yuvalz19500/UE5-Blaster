@@ -14,298 +14,313 @@
 
 ABlasterCharacter::ABlasterCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
 
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(GetMesh());
-	CameraBoom->TargetArmLength = 600.0f;
-	CameraBoom->bUsePawnControlRotation = true;
+    CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+    CameraBoom->SetupAttachment(GetMesh());
+    CameraBoom->TargetArmLength = 600.0f;
+    CameraBoom->bUsePawnControlRotation = true;
 
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;
+    FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+    FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+    FollowCamera->bUsePawnControlRotation = false;
 
-	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
-	OverheadWidget->SetupAttachment(RootComponent);
+    OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
+    OverheadWidget->SetupAttachment(RootComponent);
 
-	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
-	Combat->SetIsReplicated(true);
+    Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+    Combat->SetIsReplicated(true);
 
-	bUseControllerRotationYaw = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
-	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
-	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+    bUseControllerRotationYaw = false;
+    GetCharacterMovement()->bOrientRotationToMovement = true;
+    GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+    GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+    GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+    GetCharacterMovement()->RotationRate = FRotator(0.f, 0.f, 850.f);
 
-	TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+    TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+    NetUpdateFrequency = 66.f;
+    MinNetUpdateFrequency = 33.f;
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
+    DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
 }
 
 void ABlasterCharacter::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 }
 
 void ABlasterCharacter::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+    Super::Tick(DeltaTime);
 
-	AimOffset(DeltaTime);
+    AimOffset(DeltaTime);
 }
 
 void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-	checkf(EnhancedInputComponent, TEXT("Unable to get reference to EnhancedInputComponent"));
+    UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+    checkf(EnhancedInputComponent, TEXT("Unable to get reference to EnhancedInputComponent"));
 
-	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
-		GetWorld()->GetFirstLocalPlayerFromController());
-	checkf(InputSubsystem, TEXT("Unable to get reference to the EnhancedInputLocalPlayerSubsystem"));
+    UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(
+        GetWorld()->GetFirstLocalPlayerFromController());
+    checkf(InputSubsystem, TEXT("Unable to get reference to the EnhancedInputLocalPlayerSubsystem"));
 
-	checkf(InputMappingContext, TEXT("InputMappingContext is not set"));
-	InputSubsystem->AddMappingContext(InputMappingContext, 0);
+    checkf(InputMappingContext, TEXT("InputMappingContext is not set"));
+    InputSubsystem->AddMappingContext(InputMappingContext, 0);
 
-	if (ActionMove)
-	{
-		EnhancedInputComponent->BindAction(ActionMove, ETriggerEvent::Triggered, this, &ThisClass::HandleMove);
-	}
+    if (ActionMove)
+    {
+        EnhancedInputComponent->BindAction(ActionMove, ETriggerEvent::Triggered, this, &ThisClass::HandleMove);
+    }
 
-	if (ActionLook)
-	{
-		EnhancedInputComponent->BindAction(ActionLook, ETriggerEvent::Triggered, this, &ThisClass::HandleLook);
-	}
+    if (ActionLook)
+    {
+        EnhancedInputComponent->BindAction(ActionLook, ETriggerEvent::Triggered, this, &ThisClass::HandleLook);
+    }
 
-	if (ActionJump)
-	{
-		EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Triggered, this, &ThisClass::HandleJumpAction);
-	}
+    if (ActionJump)
+    {
+        EnhancedInputComponent->BindAction(ActionJump, ETriggerEvent::Started, this, &ThisClass::HandleJumpAction);
+    }
 
-	if (ActionEquip)
-	{
-		EnhancedInputComponent->BindAction(ActionEquip, ETriggerEvent::Triggered, this, &ThisClass::HandleEquipAction);
-	}
+    if (ActionEquip)
+    {
+        EnhancedInputComponent->BindAction(ActionEquip, ETriggerEvent::Triggered, this, &ThisClass::HandleEquipAction);
+    }
 
-	if (ActionCrouch)
-	{
-		EnhancedInputComponent->BindAction(ActionCrouch, ETriggerEvent::Started, this,
-		                                   &ThisClass::HandleCrouchAction);
-	}
+    if (ActionCrouch)
+    {
+        EnhancedInputComponent->BindAction(ActionCrouch, ETriggerEvent::Started, this,
+                                           &ThisClass::HandleCrouchAction);
+    }
 
-	if (ActionAim)
-	{
-		EnhancedInputComponent->BindAction(ActionAim, ETriggerEvent::Started, this, &ThisClass::HandleStartAimAction);
-		EnhancedInputComponent->BindAction(ActionAim, ETriggerEvent::Completed, this,
-		                                   &ThisClass::HandleCompleteAimAction);
-	}
+    if (ActionAim)
+    {
+        EnhancedInputComponent->BindAction(ActionAim, ETriggerEvent::Started, this, &ThisClass::HandleStartAimAction);
+        EnhancedInputComponent->BindAction(ActionAim, ETriggerEvent::Completed, this,
+                                           &ThisClass::HandleCompleteAimAction);
+    }
 }
 
 void ABlasterCharacter::PostInitializeComponents()
 {
-	Super::PostInitializeComponents();
+    Super::PostInitializeComponents();
 
-	if (Combat)
-	{
-		Combat->Character = this;
-	}
+    if (Combat)
+    {
+        Combat->Character = this;
+    }
 }
 
 void ABlasterCharacter::HandleMove(const FInputActionValue& InputActionValue)
 {
-	const FVector2D MoveVector = InputActionValue.Get<FVector2D>();
-	if (Controller && MoveVector.Length() != 0.f)
-	{
-		const FRotator YawRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
-		const FVector ForwardDirection(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X));
-		const FVector RightDirection(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y));
-		AddMovementInput(ForwardDirection, MoveVector.Y);
-		AddMovementInput(RightDirection, MoveVector.X);
-	}
+    const FVector2D MoveVector = InputActionValue.Get<FVector2D>();
+    if (Controller && MoveVector.Length() != 0.f)
+    {
+        const FRotator YawRotation(0.f, Controller->GetControlRotation().Yaw, 0.f);
+        const FVector ForwardDirection(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X));
+        const FVector RightDirection(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y));
+        AddMovementInput(ForwardDirection, MoveVector.Y);
+        AddMovementInput(RightDirection, MoveVector.X);
+    }
 }
 
 void ABlasterCharacter::HandleLook(const FInputActionValue& InputActionValue)
 {
-	const FVector2D LookVector = InputActionValue.Get<FVector2D>();
-	AddControllerPitchInput(LookVector.Y);
-	AddControllerYawInput(LookVector.X);
+    const FVector2D LookVector = InputActionValue.Get<FVector2D>();
+    AddControllerPitchInput(LookVector.Y);
+    AddControllerYawInput(LookVector.X);
 }
 
 void ABlasterCharacter::HandleJumpAction()
 {
-	ABlasterCharacter::Jump();
+    ABlasterCharacter::Jump();
 }
 
 void ABlasterCharacter::HandleEquipAction()
 {
-	if (Combat)
-	{
-		if (HasAuthority())
-		{
-			Combat->EquipWeapon(OverlappingWeapon);
-		}
-		else
-		{
-			ServerEquipAction();
-		}
-	}
+    if (Combat)
+    {
+        if (HasAuthority())
+        {
+            Combat->EquipWeapon(OverlappingWeapon);
+        }
+        else
+        {
+            ServerEquipAction();
+        }
+    }
 }
 
 void ABlasterCharacter::ServerEquipAction_Implementation()
 {
-	if (Combat)
-	{
-		Combat->EquipWeapon(OverlappingWeapon);
-	}
+    if (Combat)
+    {
+        Combat->EquipWeapon(OverlappingWeapon);
+    }
 }
 
 void ABlasterCharacter::HandleCrouchAction()
 {
-	if (bIsCrouched)
-	{
-		UnCrouch();
-	}
-	else
-	{
-		Crouch();
-	}
+    if (bIsCrouched)
+    {
+        UnCrouch();
+    }
+    else
+    {
+        Crouch();
+    }
 }
 
 void ABlasterCharacter::HandleStartAimAction()
 {
-	if (Combat)
-	{
-		Combat->SetAiming(true);
-	}
+    if (Combat && Combat->EquippedWeapon)
+    {
+        Combat->SetAiming(true);
+    }
 }
 
 void ABlasterCharacter::HandleCompleteAimAction()
 {
-	if (Combat)
-	{
-		Combat->SetAiming(false);
-	}
+    if (Combat)
+    {
+        Combat->SetAiming(false);
+    }
 }
 
 void ABlasterCharacter::AimOffset(float DeltaTime)
 {
-	if (Combat && Combat->EquippedWeapon == nullptr)
-	{
-		return;
-	}
+    if (Combat && Combat->EquippedWeapon == nullptr)
+    {
+        return;
+    }
 
-	FVector Velocity = GetVelocity();
-	Velocity.Z = 0.0f;
-	const float Speed = Velocity.Size();
-	const bool bIsInAir = GetMovementComponent()->IsFalling();
+    FVector Velocity = GetVelocity();
+    Velocity.Z = 0.0f;
+    const float Speed = Velocity.Size();
+    const bool bIsInAir = GetMovementComponent()->IsFalling();
 
-	if (Speed == 0.f && !bIsInAir)
-	{
-		const FRotator CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
-		const FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(
-			CurrentAimRotation, StartingAimRotation);
-		AO_Yaw = DeltaAimRotation.Yaw;
-		if (TurningInPlace == ETurningInPlace::ETIP_NotTurning)
-		{
-			InterpAO_Yaw = AO_Yaw;
-		}
-		bUseControllerRotationYaw = true;
-		TurnInPlace(DeltaTime);
-	}
+    if (Speed == 0.f && !bIsInAir)
+    {
+        const auto CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+        const FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(
+            CurrentAimRotation, StartingAimRotation);
+        AO_Yaw = DeltaAimRotation.Yaw;
+        if (TurningInPlace == ETurningInPlace::ETIP_NotTurning)
+        {
+            InterpAO_Yaw = AO_Yaw;
+        }
+        bUseControllerRotationYaw = true;
+        TurnInPlace(DeltaTime);
+    }
 
-	if (Speed > 0.f || bIsInAir)
-	{
-		StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
-		AO_Yaw = 0.f;
-		bUseControllerRotationYaw = true;
-		TurningInPlace = ETurningInPlace::ETIP_NotTurning;
-	}
+    if (Speed > 0.f || bIsInAir)
+    {
+        StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+        AO_Yaw = 0.f;
+        bUseControllerRotationYaw = true;
+        TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+    }
 
-	AO_Pitch = GetBaseAimRotation().Pitch;
-	if (AO_Pitch > 90.f && !IsLocallyControlled())
-	{
-		// Map pitch from [270, 360] to [-90, 0]
-		const FVector2D InRange(270.f, 360.f);
-		const FVector2D OutRange(-90.f, 0.f);
-		AO_Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AO_Pitch);
-	}
+    AO_Pitch = GetBaseAimRotation().Pitch;
+    if (AO_Pitch > 90.f && !IsLocallyControlled())
+    {
+        // Map pitch from [270, 360] to [-90, 0]
+        const FVector2D InRange(270.f, 360.f);
+        const FVector2D OutRange(-90.f, 0.f);
+        AO_Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AO_Pitch);
+    }
+}
+
+void ABlasterCharacter::Jump()
+{
+    if (bIsCrouched)
+    {
+        UnCrouch();
+    }
+    else
+    {
+        Super::Jump();
+    }
 }
 
 void ABlasterCharacter::TurnInPlace(float DeltaTime)
 {
-	if (AO_Yaw > 90.f)
-	{
-		TurningInPlace = ETurningInPlace::ETIP_Right;
-	}
-	else if (AO_Yaw < -90.f)
-	{
-		TurningInPlace = ETurningInPlace::ETIP_Left;
-	}
+    if (AO_Yaw > 90.f)
+    {
+        TurningInPlace = ETurningInPlace::ETIP_Right;
+    }
+    else if (AO_Yaw < -90.f)
+    {
+        TurningInPlace = ETurningInPlace::ETIP_Left;
+    }
 
-	if (TurningInPlace != ETurningInPlace::ETIP_NotTurning)
-	{
-		InterpAO_Yaw = FMath::FInterpTo(InterpAO_Yaw, 0.f, DeltaTime, 4.f);
-		AO_Yaw = InterpAO_Yaw;
+    if (TurningInPlace != ETurningInPlace::ETIP_NotTurning)
+    {
+        InterpAO_Yaw = FMath::FInterpTo(InterpAO_Yaw, 0.f, DeltaTime, 4.f);
+        AO_Yaw = InterpAO_Yaw;
 
-		if (FMath::Abs(AO_Yaw) < 15.f)
-		{
-			TurningInPlace = ETurningInPlace::ETIP_NotTurning;
-			StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
-		}
-	}
+        if (FMath::Abs(AO_Yaw) < 15.f)
+        {
+            TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+            StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+        }
+    }
 }
 
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 {
-	if (OverlappingWeapon)
-	{
-		OverlappingWeapon->ShowPickupWidget(false);
-	}
+    if (OverlappingWeapon)
+    {
+        OverlappingWeapon->ShowPickupWidget(false);
+    }
 
-	OverlappingWeapon = Weapon;
-	if (IsLocallyControlled() && OverlappingWeapon)
-	{
-		if (OverlappingWeapon)
-		{
-			OverlappingWeapon->ShowPickupWidget(true);
-		}
-	}
+    OverlappingWeapon = Weapon;
+    if (IsLocallyControlled() && OverlappingWeapon)
+    {
+        if (OverlappingWeapon)
+        {
+            OverlappingWeapon->ShowPickupWidget(true);
+        }
+    }
 }
 
 void ABlasterCharacter::OnRep_OverlappingWeapon(const AWeapon* LastWeapon) const
 {
-	if (OverlappingWeapon)
-	{
-		OverlappingWeapon->ShowPickupWidget(true);
-	}
+    if (OverlappingWeapon)
+    {
+        OverlappingWeapon->ShowPickupWidget(true);
+    }
 
-	if (LastWeapon)
-	{
-		LastWeapon->ShowPickupWidget(false);
-	}
+    if (LastWeapon)
+    {
+        LastWeapon->ShowPickupWidget(false);
+    }
 }
 
 bool ABlasterCharacter::IsWeaponEquipped() const
 {
-	return Combat && Combat->EquippedWeapon;
+    return Combat && Combat->EquippedWeapon;
 }
 
 bool ABlasterCharacter::IsAiming() const
 {
-	return Combat && Combat->bAiming;
+    return Combat && Combat->bAiming;
 }
 
 AWeapon* ABlasterCharacter::GetEquippedWeapon() const
 {
-	if (Combat == nullptr)
-	{
-		return nullptr;
-	}
-	return Combat->EquippedWeapon;
+    if (Combat == nullptr)
+    {
+        return nullptr;
+    }
+    return Combat->EquippedWeapon;
 }
