@@ -4,11 +4,12 @@
 #include "Blaster/Weapon/Weapon.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 UCombatComponent::UCombatComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 
 	BaseWalkSpeed = 600.f;
 	AimWalkSpeed = 450.f;
@@ -70,13 +71,58 @@ void UCombatComponent::OnRep_EquippedWeapon() const
 void UCombatComponent::HandleFireAction(bool bTriggered)
 {
 	bFireButtonTriggered = bTriggered;
-	if (Character && bFireButtonTriggered)
+
+	if (bFireButtonTriggered)
 	{
-		Character->PlayFireMontage(bAiming);
+		FHitResult HitResult;
+		TraceUnderCrosshairs(HitResult);
+		ServerFire(HitResult.ImpactPoint);
 	}
 }
 
-void UCombatComponent::SetAiming(bool bIsAiming)
+void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
+{
+	FVector2D ViewportSize;
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->GetViewportSize(ViewportSize);
+	}
+
+	const FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
+	FVector CrosshairWorldPosition;
+	FVector CrosshairWorldDirection;
+	const bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(this, 0),
+	                                                                     CrosshairLocation,
+	                                                                     CrosshairWorldPosition,
+	                                                                     CrosshairWorldDirection);
+	if (bScreenToWorld)
+	{
+		const FVector Start = CrosshairWorldPosition;
+		const FVector End = Start + CrosshairWorldDirection * TRACE_LENGTH;
+		GetWorld()->LineTraceSingleByChannel(TraceHitResult, Start, End, ECollisionChannel::ECC_Visibility);
+	}
+}
+
+void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+{
+	MulticastFire(TraceHitTarget);
+}
+
+void UCombatComponent::MulticastFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+{
+	if (EquippedWeapon == nullptr)
+	{
+		return;
+	}
+
+	if (Character)
+	{
+		Character->PlayFireMontage(bAiming);
+		EquippedWeapon->Fire(TraceHitTarget);
+	}
+}
+
+void UCombatComponent::SetAiming(const bool bIsAiming)
 {
 	bAiming = bIsAiming;
 	ServerSetAiming(bIsAiming);

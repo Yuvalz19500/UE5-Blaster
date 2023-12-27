@@ -7,8 +7,9 @@
 class AWeapon;
 class ABlasterCharacter;
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+#define TRACE_LENGTH 80000.f
 
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class BLASTER_API UCombatComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -33,6 +34,14 @@ protected:
 	void OnRep_EquippedWeapon() const;
 
 	void HandleFireAction(bool bTriggered);
+
+	UFUNCTION(Server, Reliable)
+	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
+
+	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)

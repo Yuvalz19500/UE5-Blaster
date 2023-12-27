@@ -112,7 +112,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	if (ActionFire)
 	{
-		EnhancedInputComponent->BindAction(ActionFire, ETriggerEvent::Triggered, this,
+		EnhancedInputComponent->BindAction(ActionFire, ETriggerEvent::Started, this,
 		                                   &ThisClass::HandleTriggerFireAction);
 		EnhancedInputComponent->BindAction(ActionFire, ETriggerEvent::Completed, this,
 		                                   &ThisClass::HandleCompleteFireAction);
@@ -221,7 +221,7 @@ void ABlasterCharacter::HandleCompleteFireAction()
 	}
 }
 
-void ABlasterCharacter::PlayFireMontage(bool bAiming)
+void ABlasterCharacter::PlayFireMontage(const bool bAiming) const
 {
 	if (Combat == nullptr || Combat->EquippedWeapon == nullptr)
 	{
@@ -232,12 +232,12 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)
 	if (AnimInstance && FireWeaponMontage)
 	{
 		AnimInstance->Montage_Play(FireWeaponMontage);
-		FName SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");
+		const FName SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
 }
 
-void ABlasterCharacter::AimOffset(float DeltaTime)
+void ABlasterCharacter::AimOffset(const float DeltaTime)
 {
 	if (Combat && Combat->EquippedWeapon == nullptr)
 	{
