@@ -6,6 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Blaster/PlayerController/BlasterPlayerController.h"
+#include "Blaster/HUD/BlasterHUD.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -30,6 +32,8 @@ void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                      FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	SetHUDCrosshairs(DeltaTime);
 }
 
 void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -38,6 +42,40 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 	DOREPLIFETIME(UCombatComponent, EquippedWeapon);
 	DOREPLIFETIME(UCombatComponent, bAiming);
+}
+
+void UCombatComponent::SetHUDCrosshairs(float DeltaTime)
+{
+	if (Character == nullptr || Character->Controller == nullptr)
+	{
+		return;
+	}
+
+	if (Controller == nullptr)
+	{
+		Controller = Cast<ABlasterPlayerController>(Character->Controller);
+	}
+
+	if (Controller)
+	{
+		if (HUD == nullptr)
+		{
+			HUD = Cast<ABlasterHUD>(Controller->GetHUD());
+		}
+
+		if (HUD)
+		{
+			FHUDPackage HUDPackage;
+
+			HUDPackage.CrosshairsCenter = EquippedWeapon ? EquippedWeapon->CrosshairsCenter : nullptr;
+			HUDPackage.CrosshairsLeft = EquippedWeapon ? EquippedWeapon->CrosshairsLeft : nullptr;
+			HUDPackage.CrosshairsRight = EquippedWeapon ? EquippedWeapon->CrosshairsRight : nullptr;
+			HUDPackage.CrosshairsTop = EquippedWeapon ? EquippedWeapon->CrosshairsTop : nullptr;
+			HUDPackage.CrosshairsBottom = EquippedWeapon ? EquippedWeapon->CrosshairsBottom : nullptr;
+
+			HUD->SetHUDPackage(HUDPackage);
+		}
+	}
 }
 
 void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)

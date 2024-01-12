@@ -6,6 +6,8 @@
 
 class AWeapon;
 class ABlasterCharacter;
+class ABlasterPlayerController;
+class ABlasterHUD;
 
 #define TRACE_LENGTH 80000.f
 
@@ -43,11 +45,17 @@ protected:
 
 	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 
+	void SetHUDCrosshairs(float DeltaTime);
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
 	TObjectPtr<AWeapon> EquippedWeapon;
 
 	TObjectPtr<ABlasterCharacter> Character;
+
+	TObjectPtr<ABlasterPlayerController> Controller;
+
+	TObjectPtr<ABlasterHUD> HUD;
 
 	UPROPERTY(Replicated)
 	bool bAiming;

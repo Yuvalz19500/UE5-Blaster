@@ -8,6 +8,8 @@ class USkeletalMeshComponent;
 class USphereComponent;
 class UWidgetComponent;
 class UAnimationAsset;
+class ACasing;
+class UTexture2D;
 
 UENUM(BlueprintType)
 enum class EWeaponState: uint8
@@ -30,6 +32,25 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void ShowPickupWidget(bool bShowWidget) const;
 	virtual void Fire(const FVector& HitTarget);
+
+	/**
+	* Textures for the weapon crosshairs
+	*/
+
+	UPROPERTY(EditAnywhere, Category="Crosshairs")
+	TObjectPtr<UTexture2D> CrosshairsCenter;
+
+	UPROPERTY(EditAnywhere, Category="Crosshairs")
+	TObjectPtr<UTexture2D> CrosshairsLeft;
+
+	UPROPERTY(EditAnywhere, Category="Crosshairs")
+	TObjectPtr<UTexture2D> CrosshairsRight;
+
+	UPROPERTY(EditAnywhere, Category="Crosshairs")
+	TObjectPtr<UTexture2D> CrosshairsTop;
+
+	UPROPERTY(EditAnywhere, Category="Crosshairs")
+	TObjectPtr<UTexture2D> CrosshairsBottom;
 
 protected:
 	virtual void BeginPlay() override;
@@ -61,6 +82,9 @@ private:
 
 	UFUNCTION()
 	void OnRep_WeaponState() const;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<ACasing> CasingClass;
 
 public:
 	void SetWeaponState(const EWeaponState State);
