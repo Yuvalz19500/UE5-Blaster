@@ -26,6 +26,9 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = true))
 	TObjectPtr<ABlasterCharacter> BlasterCharacter;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = true))
+	bool bLocallyControlled;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = true))
 	float Speed;
 
@@ -64,6 +67,9 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = true))
 	float AO_Pitch;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", meta = (AllowPrivateAccess = true))
+	FRotator RightHandRotation;
 
 	FRotator CharacterRotationLastFrame;
 	FRotator CharacterRotation;
