@@ -35,6 +35,7 @@ protected:
 
 	UFUNCTION()
 	void OnRep_EquippedWeapon() const;
+	
 	void Fire();
 
 	void HandleFireAction(bool bTriggered);

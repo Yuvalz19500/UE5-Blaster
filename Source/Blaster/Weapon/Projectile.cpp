@@ -112,12 +112,6 @@ void AProjectile::SpawnImpactParticleBasedOnSurfaceType(const FHitResult& Hit)
 	}
 }
 
-void AProjectile::Destroyed()
-{
-	Super::Destroyed();
-}
-
-
 void AProjectile::MulticastSpawnImpactParticlesAndSoundOnHit_Implementation(
 	const bool bIsCharacterHit, const FHitResult& Hit)
 {
@@ -139,16 +133,8 @@ void AProjectile::MulticastSpawnImpactParticlesAndSoundOnHit_Implementation(
 void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
                         FVector NormalImpulse, const FHitResult& Hit)
 {
-	ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(OtherActor);
-	if (BlasterCharacter)
-	{
-		BlasterCharacter->MulticastHit();
-		MulticastSpawnImpactParticlesAndSoundOnHit(true, Hit);
-	}
-	else
-	{
-		MulticastSpawnImpactParticlesAndSoundOnHit(false, Hit);
-	}
+	const ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(OtherActor);
+	MulticastSpawnImpactParticlesAndSoundOnHit(BlasterCharacter ? true : false, Hit);
 
 	Destroy();
 }

@@ -20,7 +20,6 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	void SpawnPlayerImpactParticles(const FHitResult& Hit);
 	void SpawnImpactParticleBasedOnSurfaceType(const FHitResult& Hit);
-	virtual void Destroyed() override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -32,8 +31,11 @@ protected:
 	EPhysicalSurface ExtractSurfaceType(const FHitResult& Hit) const;
 
 
-	UFUNCTION(NetMulticast, Unreliable)
+	UFUNCTION(NetMulticast, Reliable)
 	void MulticastSpawnImpactParticlesAndSoundOnHit(bool bIsCharacterHit, const FHitResult& Hit);
+
+	UPROPERTY(EditAnywhere)
+	float Damage = 20.f;
 
 private:
 	UPROPERTY(EditAnywhere)

@@ -30,6 +30,8 @@ void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	bCanFire = true;
+
 	if (Character)
 	{
 		Character->GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
@@ -88,6 +90,7 @@ void UCombatComponent::StartFireTimer()
 {
 	if (EquippedWeapon == nullptr || Character == nullptr)
 	{
+		bCanFire = true;
 		return;
 	}
 
@@ -97,12 +100,12 @@ void UCombatComponent::StartFireTimer()
 
 void UCombatComponent::FireTimerFinished()
 {
+	bCanFire = true;
 	if (EquippedWeapon == nullptr)
 	{
 		return;
 	}
 
-	bCanFire = true;
 	if (bFireButtonTriggered && EquippedWeapon->bAutomatic)
 	{
 		Fire();

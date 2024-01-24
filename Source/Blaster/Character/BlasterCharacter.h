@@ -15,6 +15,8 @@ class UWidgetComponent;
 class AWeapon;
 class UCombatComponent;
 class UAnimMontage;
+class ABlasterPlayerController;
+class AController;
 
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
@@ -26,13 +28,14 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	void UpdateHUDHealth();
 	virtual void PostInitializeComponents() override;
 	void PlayFireMontage(bool bAiming) const;
-
-	UFUNCTION(NetMulticast, Unreliable)
-	void MulticastHit();
-
+	void PlayEliminatedMontage() const;
 	virtual void OnRep_ReplicatedMovement() override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Eliminated();
 
 protected:
 	virtual void BeginPlay() override;
@@ -50,6 +53,10 @@ protected:
 	virtual void Jump() override;
 	void PlayHitReactMontage() const;
 	void CalculateAO_Pitch();
+
+	UFUNCTION()
+	void ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
+	                   AController* InstigatorController, AActor* DamageCauser);
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
@@ -111,7 +118,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TObjectPtr<UAnimMontage> HitReactMontage;
 
-	void HideCameraIfCharacterClose();
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TObjectPtr<UAnimMontage> EliminatedMontage;
+
+	void HideCameraIfCharacterClose() const;
 
 	UPROPERTY(EditAnywhere)
 	float CameraThreshold = 200.f;
@@ -124,6 +134,23 @@ private:
 	float TimeSinceLastMovementReplication;
 	float CalculateSpeed() const;
 
+	/**
+	* Player Health
+	*/
+
+	UPROPERTY(EditAnywhere, Category = "Player Stats")
+	float MaxHealth = 100.f;
+
+	UPROPERTY(ReplicatedUsing = OnRep_Health, VisibleAnywhere, Category = "Player Stats")
+	float Health = 100.f;
+
+	UFUNCTION()
+	void OnRep_Health();
+
+	TObjectPtr<ABlasterPlayerController> BlasterPlayerController;
+
+	bool bEliminated = false;
+
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped() const;
@@ -135,4 +162,5 @@ public:
 	FVector GetHitTarget() const;
 	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; };
 	FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; };
+	FORCEINLINE bool IsEliminated() const { return bEliminated; };
 };
