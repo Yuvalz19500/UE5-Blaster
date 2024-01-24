@@ -18,6 +18,8 @@ class BLASTER_API AProjectile : public AActor
 public:
 	AProjectile();
 	virtual void Tick(float DeltaTime) override;
+	void SpawnPlayerImpactParticles(const FHitResult& Hit);
+	void SpawnImpactParticleBasedOnSurfaceType(const FHitResult& Hit);
 	virtual void Destroyed() override;
 
 protected:
@@ -26,6 +28,12 @@ protected:
 	UFUNCTION()
 	virtual void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	                   FVector NormalImpulse, const FHitResult& Hit);
+
+	EPhysicalSurface ExtractSurfaceType(const FHitResult& Hit) const;
+
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastSpawnImpactParticlesAndSoundOnHit(bool bIsCharacterHit, const FHitResult& Hit);
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -40,7 +48,13 @@ private:
 	TObjectPtr<UParticleSystemComponent> TracerComponent;
 
 	UPROPERTY(EditAnywhere)
-	TObjectPtr<UParticleSystem> ImpactParticles;
+	TArray<TObjectPtr<UParticleSystem>> PlayerImpactParticles;
+
+	UPROPERTY(EditAnywhere)
+	TArray<TObjectPtr<UParticleSystem>> StoneImpactParticles;
+
+	UPROPERTY(EditAnywhere)
+	TArray<TObjectPtr<UParticleSystem>> MetalImpactParticles;
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<USoundCue> ImpactSound;

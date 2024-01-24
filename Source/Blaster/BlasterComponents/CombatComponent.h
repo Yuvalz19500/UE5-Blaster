@@ -35,6 +35,7 @@ protected:
 
 	UFUNCTION()
 	void OnRep_EquippedWeapon() const;
+	void Fire();
 
 	void HandleFireAction(bool bTriggered);
 
@@ -44,7 +45,7 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
 
-	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
+	void TraceUnderCrosshairs(FHitResult& TraceHitResult) const;
 
 	void SetHUDCrosshairs(float DeltaTime);
 
@@ -72,10 +73,12 @@ private:
 	/**
 	* HUD and crosshairs
 	*/
+
 	float CrosshairVelocityFactor;
 	float CrosshairInAirFactor;
 	float CrosshairAimFactor;
 	float CrosshairShootingFactor;
+	float CrosshairCharacterAimFactor;
 	FHUDPackage HUDPackage;
 
 	FVector HitTarget;
@@ -83,6 +86,7 @@ private:
 	/**
 	* Aiming anf FOV
 	*/
+
 	// Field of view when not aiming set to the camera's base FOV in begin play
 	float DefaultFOV;
 
@@ -95,4 +99,14 @@ private:
 	float ZoomInterpSpeed = 20.f;
 
 	void InterpFOV(float DeltaTime);
+
+	/**
+	* Automatic Fire
+	*/
+
+	FTimerHandle FireTimer;
+	bool bCanFire = true;
+
+	void StartFireTimer();
+	void FireTimerFinished();
 };
